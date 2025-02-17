@@ -1,0 +1,49 @@
+name: "Update Changelog"
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Target branch'
+        default: ${{ github.event.release.target_commitish }}
+        type: string
+      version:
+        description: 'Released version'
+        default: ${{ github.event.release.tag_name }}
+        type: string
+      notes:
+        description: 'Release notes'
+        default: ${{ github.event.release.body }}
+        type: string
+
+jobs:
+  update:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch entire history of repository to ensure release date can be
+          # extracted from commit of the given tag.
+          fetch-depth: 0
+          # Checkout target branch of this release. Ensures that the CHANGELOG
+          # is not out of date.
+          ref: ${{ inputs.branch }}
+
+      - name: Update Changelog
+        uses: stefanzweifel/changelog-updater-action@v1
+        with:
+          # Pass extracted release date, release notes and version to the Action.
+          release-notes: ${{ inputs.notes }}
+          latest-version: ${{ inputs.version }}
+          compare-url-target-revision: ${{ inputs.branch }}
+
+      - name: Commit updated CHANGELOG
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # Push updated CHANGELOG to release target branch.
+          branch: ${{ inputs.branch }}
+          commit_message: Update CHANGELOG
+          file_pattern: CHANGELOG.md
